@@ -8,13 +8,19 @@ import {
   TouchableOpacity,
   View,
   Image,
+  Alert,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { decode } from "base64-arraybuffer";
+import { supabase } from "@/services/supabaseClient";
+import { router } from "expo-router";
+import { useFocusEffect } from "expo-router";
+
 
 export default function Add() {
+
   //สร้าง state เพื่อจัการกับข้อมูล
   const [location, setLocation] = useState("");
   const [distance, setDistance] = useState("");
@@ -35,6 +41,7 @@ export default function Add() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.5,
+      base64: true,
     });
 
     //หลังจาดถ่ายภาพเรียบร้อย เอาไป เก็บใน state ที่ต้องการ
@@ -44,12 +51,59 @@ export default function Add() {
     }
   };
 
+  //ฟังก์ชันบันทึกข้อมูลจากที่ผู้ใช้ป้อน/เลือกไปไว้ที่ supabase
+  const handleSaveToSupabase = async () => {
+    //Validation location distance image
+    if (!location || !distance || !image) {
+      Alert.alert("คำเตือน", "กรุณากรอกข้อมูลให้ครบ และเลือกรูปภาพ");
+      return;
+    }
+
+    //อัปโหลดรูปไปยัง bucket storage supabase
+    //ตัวแปรเก็บ url ของรูปที่อัปโหลด
+    let image_url = "";
+    const fileName = `image_${Date.now()}.jpg`; //ตั้งชื่อไฟล์ที่จะอัปโหลด
+    const { error: uploadError } = await supabase.storage
+      .from("run_bk")
+      .upload(fileName, decode(base64Image || ""), {
+        contentType: "image/jpeg",
+      });
+    if (uploadError) throw uploadError; //ตรวจสอบการอัปโหลด
+
+    //เอา url ของรูปจาก bucket storage supabase มาเก็บไว้ในตัวแปร image_url
+    image_url = await supabase.storage.from("run_bk").getPublicUrl(fileName)
+      .data.publicUrl;
+
+    //บันทึกข้อมูลไปยัง table database supabase
+    const { error: insertError } = await supabase.from("runs").insert([
+      {
+        location: location,
+        distance: distance,
+        time_of_day: timeOfDay,
+        run_date: new Date().toISOString().split("T")[0], //เอาแต่ ปี เดือน วัน ไม่เอาเวลา
+        image_url: image_url,
+      },
+    ]);
+
+    if (insertError) {
+      Alert.alert("เกิดข้อผิดพลาด", insertError.message);
+      return;
+    }
+
+    //บันทึกข้อมูลไปยัง table database supabase
+    Alert.alert("สําเร็จ", "ข้อมูลถูกบันทึกเรียบร้อยแล้ว");
+
+    //เปลี่ยนหน้าไปยังหน้า Run
+    router.back();
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.keyboard}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView style={styles.scollV} contentContainerStyle={{ padding: 20 }}>
+        {/*ช่องใส่สถานที่*/}
         <Text style={styles.titleShow}>สถานที่วิ่ง</Text>
         <TextInput
           placeholder="เช่น สวนลุมพินี"
@@ -57,6 +111,8 @@ export default function Add() {
           value={location}
           onChangeText={setLocation}
         ></TextInput>
+
+        {/*ช่องใส่ระยะทาง*/}
         <Text style={styles.titleShow}>ระยะทาง (กิโลเมตร)</Text>
         <TextInput
           placeholder="เช่น 5.2"
@@ -65,8 +121,10 @@ export default function Add() {
           value={distance}
           onChangeText={setDistance}
         ></TextInput>
+
         <Text style={styles.titleShow}>ช่วงเวลา</Text>
         <View style={styles.timerun}>
+          {/*ปุ่มเช้า*/}
           <TouchableOpacity
             style={[
               styles.btntimeselect,
@@ -83,6 +141,8 @@ export default function Add() {
               เช้า
             </Text>
           </TouchableOpacity>
+
+          {/*ปุ่มเย็น*/}
           <TouchableOpacity
             style={[
               styles.btntimeselect,
@@ -100,6 +160,8 @@ export default function Add() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/*ปุ่มถ่ายภาพ*/}
         <Text style={styles.titleShow}>รูปภาพสถานที่</Text>
         <TouchableOpacity style={styles.takePhotobtn} onPress={handleTakePhoto}>
           {image ? (
@@ -114,7 +176,9 @@ export default function Add() {
             </View>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btnSave}>
+
+        {/*ปุ่มบันทึก*/}
+        <TouchableOpacity style={styles.btnSave} onPress={handleSaveToSupabase}>
           <Text style={styles.btnTxtSave}>บันทึกข้อมมูล</Text>
         </TouchableOpacity>
       </ScrollView>
