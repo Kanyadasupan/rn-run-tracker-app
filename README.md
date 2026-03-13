@@ -8,6 +8,7 @@
 
 ### หน้า Sign in
 ### - กดแล้วเด้งไปหน้าsign in ของ google
+### - พอกดเลือกบัญชีแล้วระบบจะ log in แล้วเด้งไปที่หน้าหลักของแอพอัตโนมัติ
 <img src="https://github.com/user-attachments/assets/53b34226-4776-4015-9385-654e009eb47b" width="200">
 <img src="https://github.com/user-attachments/assets/301425e9-1bbf-414e-b92e-b1780edc47f5" width="200">
 <hr />
