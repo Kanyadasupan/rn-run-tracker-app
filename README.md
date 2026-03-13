@@ -42,4 +42,5 @@
 <hr />
 
 ### ตารางdatabase จาก supabase
+### - การเข้าสู่ระบบ Sign in จะใช้ระบบ Supabase Authentication
 <img src="https://github.com/user-attachments/assets/ef864221-02af-413b-822a-305fe363c5a6" width="200">
