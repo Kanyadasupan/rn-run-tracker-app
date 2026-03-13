@@ -1,50 +1,40 @@
-# Welcome to your Expo app 👋
+# Welcome to Mobile Application by React Native Expo 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Run Tracker App
 
-## Get started
+### หน้าจอเริ่มต้นก่อนเข้าสู่หน้าหลักของแอพ
+<img src="https://github.com/user-attachments/assets/379359bf-d7e7-4a57-80e4-416180dcc429" width="200">
+<hr />
 
-1. Install dependencies
+### หน้า Sign in
+### - กดแล้วเด้งไปหน้าsign in ของ google
+<img src="https://github.com/user-attachments/assets/53b34226-4776-4015-9385-654e009eb47b" width="200">
+<img src="https://github.com/user-attachments/assets/301425e9-1bbf-414e-b92e-b1780edc47f5" width="200">
+<hr />
 
-   ```bash
-   npm install
-   ```
+### หน้าหลักของแอพ 
+### - รายการสถานที่
+### - ปุ่ม Log out และ ชื่อบัญชี กับ บัญชีอีเมล
+### - ปุ่ม บวกเพิ่มสถานที่ด้านล่างขวา
+<img src="https://github.com/user-attachments/assets/0254b71d-4741-487b-8e4f-08582c90c3d5" width="200">
+<hr />
 
-2. Start the app
+### หน้าเพิ่มสถานที่
+### - ใส่ชื่อสถานที่วิ่งได้
+### - ใส่ระยะทางที่วิ่งได้
+### - เลือกช่วงเวลาในการวิ่ง
+### - ถ่ายรูปสถานที่ได้
+<img src="https://github.com/user-attachments/assets/7424ea53-1fa9-4014-b796-c89d1b82fe19" width="200">
+<img src="https://github.com/user-attachments/assets/7d1ca095-89be-4e29-893e-10e84852179c" width="200">
+<hr />
 
-   ```bash
-   npx expo start
-   ```
+### หน้ารายละเอียดข้อมูลสถานที่่
+### - สามารแก้ไขชื่อสถานที่ ระยะทาง และรูปภาพได้
+<img src="https://github.com/user-attachments/assets/bafb0cc1-3141-444d-be36-f955f74a986d" width="200">
+<img src="https://github.com/user-attachments/assets/81bad8ce-0088-4bd4-b426-d2fc42f815f3" width="200">
+<img src="https://github.com/user-attachments/assets/401ced7c-46a9-4e17-b4ba-203bafa9da1d" width="200">
+<img src="https://github.com/user-attachments/assets/d55f0442-9615-4299-8dcd-da12ccda7f96" width="200">
+<hr />
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### ตารางdatabase จาก supabase
+<img src="https://github.com/user-attachments/assets/ef864221-02af-413b-822a-305fe363c5a6" width="200">
