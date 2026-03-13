@@ -7,12 +7,12 @@ import {
   Alert,
   FlatList,
 } from "react-native";
-import React from "react";
+import React, { useCallback } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { supabase } from "@/services/supabaseClient";
+
 import { RunsType } from "@/types/runstype";
-import { useCallback } from "react";
 
 const run = require("@/assets/images/run.png");
 
@@ -117,8 +117,8 @@ const styles = StyleSheet.create({
   imglogo: {
     width: 120,
     height: 120,
-    marginTop: 50,
-    margin:"auto",
+    marginTop: 20,
+    margin: "auto",
   },
   card: {
     backgroundColor: "#FFF",

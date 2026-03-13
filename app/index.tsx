@@ -1,11 +1,18 @@
 import { StyleSheet, Text, View, Image, ActivityIndicator } from "react-native";
 import React, { useEffect } from "react";
 import { router } from "expo-router";
+import { supabase } from "@/services/supabaseClient";
 
 export default function Index() {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace("/run");
+    const timer = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        router.replace("/run");
+      } else {
+        router.replace("/login");
+      }
     }, 3000);
 
     return () => clearTimeout(timer);

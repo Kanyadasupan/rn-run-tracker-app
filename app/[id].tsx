@@ -10,12 +10,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from "react-native";
 
 import { supabase } from "@/services/supabaseClient";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { decode } from "base64-arraybuffer";
 
 export default function RunDetail() {
+  
   //สร้างตัวแปรเก็ยข้อมูลที่ส่งมา ณ ที่นี้ คือ id ผ่าน useLocationSearchParams
   const { id } = useLocalSearchParams();
 
@@ -25,10 +29,12 @@ export default function RunDetail() {
   const [timeOfDay, setTimeOfDay] = useState("เช้า");
   const [imageUrl, setImageUrl] = useState("");
   const [updating, setUpdating] = useState(false);
-
+  const [isImageChanged, setIsImageChanged] = useState(false);
+  const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [oldImageUrl, setOldImageUrl] = useState("");
   useEffect(() => {
     fetchRun();
-  }, []);
+  }, [id]);
 
   //สร้างฟังก์ชันดึงข้อมูลรายการวิ่งจาก supabase ตาม id ที่ส่งมา
   const fetchRun = async () => {
@@ -44,39 +50,158 @@ export default function RunDetail() {
     setDistance(data.distance.toString());
     setTimeOfDay(data.time_of_day);
     setImageUrl(data.image_url);
+    setIsImageChanged(false);
+
+    setOldImageUrl(data.image_url);
   };
-  //ฟังก์ชันแก้ไข
-  const handleUpdateRunClick = async () => {
-    Alert.alert("แก้ไขรายการวิ่ง", "คุณต้องการแก้ไขรายการวิ่งนี้หรือไม่?", [
+  // ฟังก์ชันจัดการสิทธิ์การเข้าถึง
+  const requestPermissions = async () => {
+    if (Platform.OS !== "web") {
+      const { status: cameraRollStatus } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status: cameraStatus } =
+        await ImagePicker.requestCameraPermissionsAsync();
+
+      if (cameraRollStatus !== "granted" || cameraStatus !== "granted") {
+        Alert.alert(
+          "ขออภัย",
+          "แอปต้องการสิทธิ์เข้าถึงกล้องและอัลบั้มรูปภาพเพื่อใช้งานฟีเจอร์นี้",
+        );
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // ฟังก์ชันเปิดเมนูเลือกวิธีเปลี่ยนรูป (ถ่ายใหม่ / แกลเลอรี่)
+  const handleChangeImage = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    // สร้างเมนูตัวเลือก
+    Alert.alert("แก้ไขรูปภาพ", "เลือกช่องทางที่คุณต้องการเปลี่ยนรูปภาพ", [
       { text: "ยกเลิก", style: "cancel" },
       {
-        text: "แก้ไข",
-        style: "destructive",
-        onPress: async () => {
-          //validation location distance image
-          if (!location || !distance) {
-            Alert.alert("คําเตือน", "กรุณากรอกข้อมูลที่จะแก้ไขให้ครบ");
-            return;
-          }
-          //อัปเดตข้อมูลใน table->supabase
-          const { error: UpdateError } = await supabase
-            .from("runs")
-            .update({
-              location: location,
-              distance: distance,
-              time_of_day: timeOfDay,
-            })
-            .eq("id", id);
-          if (UpdateError) {
-            Alert.alert(
-              "คำเตือน",
-              "ไม่สามารถแก้ไขรายการวิ่งได้ กรุณาลองใหม่อีกครั้ง",
-            );
-            return;
-          }
+        text: "📷 ถ่ายรูปภาพใหม่",
+        onPress: () => launchPicker("camera"),
+      },
+      {
+        text: "🖼️ เลือกจากแกลเลอรี่",
+        onPress: () => launchPicker("library"),
+      },
+    ]);
+  };
 
-          Alert.alert("สำเร็จ", "รายการวิ่งถูกแก้ไขเรียบร้อยแล้ว");
-          router.back();
+  // ฟังก์ชันเปิดกล้องหรือแกลเลอรี่
+  const launchPicker = async (type: "camera" | "library") => {
+    let result;
+    const commonConfig = {
+      allowsEditing: true,
+      aspect: [16, 9] as [number, number],
+      quality: 0.5,
+      base64: true,
+    };
+
+    if (type === "camera") {
+      result = await ImagePicker.launchCameraAsync(commonConfig);
+    } else {
+      result = await ImagePicker.launchImageLibraryAsync(commonConfig);
+    }
+
+    if (!result.canceled) {
+      setImageUrl(result.assets[0].uri);
+      setBase64Image(result.assets[0].base64 || null);
+      setIsImageChanged(true);
+    }
+  };
+
+  // ฟังก์ชันอัปโหลดรูปใหม่
+  const uploadNewImage = async () => {
+    if (!base64Image) return null;
+
+    const fileName = `image_${Date.now()}.jpg`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("run_bk")
+      .upload(filePath, decode(base64Image), {
+        contentType: "image/jpeg",
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from("run_bk").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  //ฟังก์ชันแก้ไข
+  const handleUpdateRunClick = async () => {
+    if (!location || !distance) {
+      Alert.alert("คำเตือน", "กรุณากรอกสถานที่และระยะทางให้ครบถ้วน");
+      return;
+    }
+
+    Alert.alert("บันทึกการแก้ไข", "คุณต้องการบันทึกข้อมูลหรือไม่?", [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "บันทึก",
+        onPress: async () => {
+          setUpdating(true);
+          try {
+            let finalImageUrl = imageUrl;
+
+            if (isImageChanged && base64Image) {
+              const oldUrlToDelete = oldImageUrl;
+
+              console.log("กำลังอัปโหลดรูปภาพใหม่...");
+              const newUrl = await uploadNewImage();
+
+              if (newUrl) {
+                finalImageUrl = newUrl;
+
+                if (oldUrlToDelete) {
+                  console.log("ลบรูปเก่าทิ้งทันที...");
+                  const oldFileName = oldUrlToDelete
+                    .split("/")
+                    .pop()
+                    ?.split("?")[0];
+
+                  if (oldFileName) {
+                    await supabase.storage.from("run_bk").remove([oldFileName]);
+                    console.log("ลบรูปเก่าสำเร็จ:", oldFileName);
+                  }
+                }
+              }
+            }
+
+            console.log("⏳ กำลังอัปเดตข้อมูลใน DB...");
+            const { error: updateError } = await supabase
+              .from("runs")
+              .update({
+                location: location,
+                distance: parseFloat(distance),
+                time_of_day: timeOfDay,
+                image_url: finalImageUrl,
+              })
+              .eq("id", id);
+
+            if (updateError) throw updateError;
+
+            setIsImageChanged(false);
+            setBase64Image(null);
+            Alert.alert("สำเร็จ", "แก้ไขข้อมูลเรียบร้อยแล้ว");
+            router.back();
+          } catch (error) {
+            let errorMessage = "เกิดข้อผิดพลาดที่ไม่รู้จัก";
+            if (error instanceof Error) {
+              errorMessage = error.message;
+            } else if (typeof error === "string") {
+              errorMessage = error;
+            }
+            Alert.alert("Error", "เกิดข้อผิดพลาด: " + errorMessage);
+          } finally {
+            setUpdating(false);
+          }
         },
       },
     ]);
@@ -99,10 +224,22 @@ export default function RunDetail() {
           if (tableError) throw tableError;
 
           //ลบข้อมูลออกจาก storage->supabase
-          const { error: storageError } = await supabase.storage
-            .from("run_bk")
-            .remove([imageUrl.split("/").pop()!]);
-          if (storageError) throw storageError;
+          if (imageUrl) {
+            const fileName = imageUrl.split("/").pop()?.split("?")[0];
+            if (fileName) {
+              console.log("กำลังลบรูปภาพออกจาก Storage:", fileName);
+              const { error: storageError } = await supabase.storage
+                .from("run_bk")
+                .remove([fileName]);
+
+              if (storageError) {
+                console.error(
+                  "Warning: ลบรูปใน Storage ไม่สำเร็จ:",
+                  storageError.message,
+                );
+              }
+            }
+          }
 
           Alert.alert("สำเร็จ", "รายการวิ่งถูกลบเรียบร้อยแล้ว");
           router.back();
@@ -114,20 +251,31 @@ export default function RunDetail() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* ส่วนแสดงรูปภาพ */}
-      <View style={styles.imageContainer}>
+      <TouchableOpacity
+        style={styles.imageContainer}
+        onPress={handleChangeImage}
+        activeOpacity={0.8}
+      >
         {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.mainImage}
-            resizeMode="cover"
-          />
+          <View style={styles.imageWrapper}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.mainImage}
+              resizeMode="cover"
+            />
+            {/* สัญลักษณ์บอกให้แก้ไขรูปภาพ (Badge) */}
+            <View style={styles.editBadge}>
+              <Ionicons name="camera-reverse" size={18} color="#FFF" />
+              <Text style={styles.editBadgeText}>แก้ไขรูป</Text>
+            </View>
+          </View>
         ) : (
           <View style={[styles.mainImage, styles.noImage]}>
             <Ionicons name="image-outline" size={60} color="#DDD" />
-            <Text style={styles.noImageText}>ไม่มีรูปภาพประกอบ</Text>
+            <Text style={styles.noImageText}>กดเพื่อเพิ่มรูปภาพประกอบ</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
 
       {/* ฟอร์มแก้ไขข้อมูล */}
       <View style={styles.formCard}>
@@ -319,5 +467,29 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.7,
+  },
+  imageWrapper: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  editBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  editBadgeText: {
+    color: "#FFF",
+    fontFamily: "Kanit_400Regular",
+    fontSize: 12,
+    marginLeft: 5,
   },
 });

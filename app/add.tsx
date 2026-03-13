@@ -10,15 +10,12 @@ import {
   Image,
   Alert,
 } from "react-native";
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { decode } from "base64-arraybuffer";
 import { supabase } from "@/services/supabaseClient";
-import { router } from "expo-router";
-import { useFocusEffect } from "expo-router";
-
-
+import { router,useFocusEffect } from "expo-router";
 export default function Add() {
 
   //สร้าง state เพื่อจัการกับข้อมูล
