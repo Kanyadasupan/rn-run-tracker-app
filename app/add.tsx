@@ -15,9 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { decode } from "base64-arraybuffer";
 import { supabase } from "@/services/supabaseClient";
-import { router,useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 export default function Add() {
-
   //สร้าง state เพื่อจัการกับข้อมูล
   const [location, setLocation] = useState("");
   const [distance, setDistance] = useState("");
@@ -49,36 +48,48 @@ export default function Add() {
   };
 
   //ฟังก์ชันบันทึกข้อมูลจากที่ผู้ใช้ป้อน/เลือกไปไว้ที่ supabase
+  // ฟังก์ชันบันทึกข้อมูลจากที่ผู้ใช้ป้อน/เลือกไปไว้ที่ supabase
   const handleSaveToSupabase = async () => {
-    //Validation location distance image
+    // Validation location distance image
     if (!location || !distance || !image) {
       Alert.alert("คำเตือน", "กรุณากรอกข้อมูลให้ครบ และเลือกรูปภาพ");
       return;
     }
 
-    //อัปโหลดรูปไปยัง bucket storage supabase
-    //ตัวแปรเก็บ url ของรูปที่อัปโหลด
+    // 1. ดึงข้อมูล User ปัจจุบัน ✨
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      Alert.alert("ข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่");
+      return;
+    }
+
+    // อัปโหลดรูปไปยัง bucket storage supabase
     let image_url = "";
-    const fileName = `image_${Date.now()}.jpg`; //ตั้งชื่อไฟล์ที่จะอัปโหลด
+    const fileName = `image_${Date.now()}.jpg`;
+    const filePath = `${user.id}/${fileName}`;
+
     const { error: uploadError } = await supabase.storage
       .from("run_bk")
-      .upload(fileName, decode(base64Image || ""), {
+      .upload(filePath, decode(base64Image || ""), {
         contentType: "image/jpeg",
       });
-    if (uploadError) throw uploadError; //ตรวจสอบการอัปโหลด
+    if (uploadError) throw uploadError;
 
-    //เอา url ของรูปจาก bucket storage supabase มาเก็บไว้ในตัวแปร image_url
-    image_url = await supabase.storage.from("run_bk").getPublicUrl(fileName)
+    // เอา url ของรูปจาก bucket
+    image_url = supabase.storage.from("run_bk").getPublicUrl(filePath)
       .data.publicUrl;
 
-    //บันทึกข้อมูลไปยัง table database supabase
+    // บันทึกข้อมูลไปยัง table database supabase
     const { error: insertError } = await supabase.from("runs").insert([
       {
         location: location,
         distance: distance,
         time_of_day: timeOfDay,
-        run_date: new Date().toISOString().split("T")[0], //เอาแต่ ปี เดือน วัน ไม่เอาเวลา
+        run_date: new Date().toISOString().split("T")[0],
         image_url: image_url,
+        user_id: user.id,
       },
     ]);
 
@@ -87,10 +98,7 @@ export default function Add() {
       return;
     }
 
-    //บันทึกข้อมูลไปยัง table database supabase
     Alert.alert("สําเร็จ", "ข้อมูลถูกบันทึกเรียบร้อยแล้ว");
-
-    //เปลี่ยนหน้าไปยังหน้า Run
     router.back();
   };
 

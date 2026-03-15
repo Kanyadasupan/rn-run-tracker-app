@@ -22,17 +22,28 @@ export default function Run() {
 
   //สร้างฟังก์ชันดึงข้อมูลรายการวิ่งจาก supabase
   const fetchRuns = async () => {
-    //ดึง
-    const { data, error } = await supabase.from("runs").select("*");
-    //ตรวจสอบ error
+    // ดึงข้อมูล user ปัจจุบัน ✨
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // ดึงข้อมูลเฉพาะของ user คนนี้ ✨
+    const { data, error } = await supabase
+      .from("runs")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("run_date", { ascending: false });
+
+    // ตรวจสอบ error
     if (error) {
       Alert.alert("คำเตือน", "ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
       return;
     }
-    //กำหนดข้อมูลที่ดึงมาให้กับ state
+    // กำหนดข้อมูลที่ดึงมาให้กับ state
     setRuns(data as RunsType[]);
   };
-  //เรียกใช้ฟังก์ชันดึงข้อมูล (fetchRuns)
+  //เรียกใช้ฟังก์ชันดึงข้อมูล
   useFocusEffect(
     useCallback(() => {
       fetchRuns();

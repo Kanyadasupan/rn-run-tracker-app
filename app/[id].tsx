@@ -19,7 +19,6 @@ import * as ImagePicker from "expo-image-picker";
 import { decode } from "base64-arraybuffer";
 
 export default function RunDetail() {
-  
   //สร้างตัวแปรเก็ยข้อมูลที่ส่งมา ณ ที่นี้ คือ id ผ่าน useLocationSearchParams
   const { id } = useLocalSearchParams();
 
@@ -119,8 +118,14 @@ export default function RunDetail() {
   const uploadNewImage = async () => {
     if (!base64Image) return null;
 
+    // ดึงข้อมูล User
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
     const fileName = `image_${Date.now()}.jpg`;
-    const filePath = `${fileName}`;
+    const filePath = `${user.id}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("run_bk")
@@ -162,8 +167,7 @@ export default function RunDetail() {
                 if (oldUrlToDelete) {
                   console.log("ลบรูปเก่าทิ้งทันที...");
                   const oldFileName = oldUrlToDelete
-                    .split("/")
-                    .pop()
+                    .split("run_bk/")[1]
                     ?.split("?")[0];
 
                   if (oldFileName) {
@@ -174,7 +178,7 @@ export default function RunDetail() {
               }
             }
 
-            console.log("⏳ กำลังอัปเดตข้อมูลใน DB...");
+            console.log("กำลังอัปเดตข้อมูลใน DB...");
             const { error: updateError } = await supabase
               .from("runs")
               .update({
@@ -225,7 +229,7 @@ export default function RunDetail() {
 
           //ลบข้อมูลออกจาก storage->supabase
           if (imageUrl) {
-            const fileName = imageUrl.split("/").pop()?.split("?")[0];
+            const fileName = imageUrl.split("run_bk/")[1]?.split("?")[0];
             if (fileName) {
               console.log("กำลังลบรูปภาพออกจาก Storage:", fileName);
               const { error: storageError } = await supabase.storage
